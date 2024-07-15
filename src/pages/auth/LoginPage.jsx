@@ -1,5 +1,6 @@
 import { useFormik } from "formik";
 import { Link } from "react-router-dom";
+import * as Yup from "yup";
 
 import XSvg from "../../components/svgs/X";
 
@@ -12,6 +13,23 @@ const LoginPage = () => {
       username: "",
       password: "",
     },
+    validationSchema: Yup.object({
+      username: Yup.string()
+        .min(3, "username must be atleast 3 characters long")
+        .max(20, "username cannot exceed 20 characters")
+        .matches(
+          /^[0-9a-z]*$/,
+          "Username can only contain alphanumeric characters"
+        )
+        .required("Required"),
+      password: Yup.string()
+        .min(6, "Password must be 6 characters long")
+        .max(30, "Password must not exceed 30 characters")
+        .matches(/[0-9]/, "Password requires a number")
+        .matches(/[a-z]/, "Password requires a lowercase letter")
+        .matches(/[A-Z]/, "Password requires an uppercase letter")
+        .required("Required"),
+    }),
     onSubmit: (values) => {
       console.log(values);
       alert(JSON.stringify(values, null, 2));
@@ -40,6 +58,11 @@ const LoginPage = () => {
               value={formik.values.username}
             />
           </label>
+          {formik.touched.username && formik.errors.username ? (
+            <p className="text-red-500 text-xs italic items-center">
+              {formik.errors.username}
+            </p>
+          ) : null}
 
           <label className="input input-bordered rounded flex items-center gap-2">
             <MdPassword />
@@ -52,6 +75,11 @@ const LoginPage = () => {
               value={formik.values.password}
             />
           </label>
+          {formik.touched.password && formik.errors.password ? (
+            <p className="text-red-500 text-xs italic items-center">
+              {formik.errors.password}
+            </p>
+          ) : null}
           <button
             type="submit"
             className="btn rounded-full btn-primary text-white"
