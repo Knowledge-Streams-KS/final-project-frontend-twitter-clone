@@ -1,5 +1,5 @@
 import XSvg from "../svgs/X";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axiosInstance from "../../axios/axios.jsx";
 import toast from "react-hot-toast";
 
@@ -10,11 +10,7 @@ import { Link } from "react-router-dom";
 import { BiLogOut } from "react-icons/bi";
 
 const Sidebar = () => {
-  const data = {
-    fullName: "John Doe",
-    username: "johndoe",
-    profileImg: "/avatars/boy1.png",
-  };
+  const queryClient = useQueryClient();
 
   const {
     mutate: logoutMutation,
@@ -30,15 +26,18 @@ const Sidebar = () => {
       } catch (err) {
         console.log("status: ", err.response.status);
         console.log("Error: ", err.response.data.message);
-        toast.error(err.response.data.message);
         console.log(err);
+        toast.error(err.response.data.message);
         throw new Error(err.response.data.message || "Something went wrong");
       }
     },
     onSuccess: () => {
-      toast.success("Logged in successfully");
+      toast.success("Logged out successfully");
+      queryClient.invalidateQueries({ queryKey: ["authUser"] });
     },
   });
+
+  const { data } = useQuery({ queryKey: ["authUser"] });
 
   return (
     <div className="md:flex-[2_2_0] w-18 max-w-52">

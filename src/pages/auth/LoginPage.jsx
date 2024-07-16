@@ -2,7 +2,7 @@ import { useFormik } from "formik";
 import { Link } from "react-router-dom";
 import * as Yup from "yup";
 import axiosInstance from "../../axios/axios";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 
 import XSvg from "../../components/svgs/X";
@@ -40,6 +40,8 @@ const LoginPage = () => {
     },
   });
 
+  const queryClient = useQueryClient();
+
   const {
     mutate: loginMutation,
     isError,
@@ -62,6 +64,7 @@ const LoginPage = () => {
     },
     onSuccess: () => {
       toast.success("Logged in successfully");
+      queryClient.invalidateQueries({ queryKey: ["authUser"] });
     },
   });
 
