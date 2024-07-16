@@ -1,4 +1,7 @@
 import XSvg from "../svgs/X";
+import { useMutation } from "@tanstack/react-query";
+import axiosInstance from "../../axios/axios.jsx";
+import toast from "react-hot-toast";
 
 import { MdHomeFilled } from "react-icons/md";
 import { IoNotifications } from "react-icons/io5";
@@ -12,6 +15,30 @@ const Sidebar = () => {
     username: "johndoe",
     profileImg: "/avatars/boy1.png",
   };
+
+  const {
+    mutate: logoutMutation,
+    isError,
+    isPending,
+    error,
+  } = useMutation({
+    mutationFn: async (data) => {
+      try {
+        const response = await axiosInstance.post("/auth/logout");
+        console.log("status: ", response.status);
+        console.log("message: ", response.data.message);
+      } catch (err) {
+        console.log("status: ", err.response.status);
+        console.log("Error: ", err.response.data.message);
+        toast.error(err.response.data.message);
+        console.log(err);
+        throw new Error(err.response.data.message || "Something went wrong");
+      }
+    },
+    onSuccess: () => {
+      toast.success("Logged in successfully");
+    },
+  });
 
   return (
     <div className="md:flex-[2_2_0] w-18 max-w-52">
@@ -66,7 +93,13 @@ const Sidebar = () => {
                 </p>
                 <p className="text-slate-500 text-sm">@{data?.username}</p>
               </div>
-              <BiLogOut className="w-5 h-5 cursor-pointer" />
+              <BiLogOut
+                className="w-5 h-5 cursor-pointer"
+                onClick={(e) => {
+                  e.preventDefault(); // To stop event bubbling
+                  logoutMutation();
+                }}
+              />
             </div>
           </Link>
         )}
