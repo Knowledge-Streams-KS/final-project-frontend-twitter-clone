@@ -1,6 +1,9 @@
 import { Link } from "react-router-dom";
 import { useFormik } from "formik";
 import * as Yup from "yup";
+import { useMutation } from "@tanstack/react-query";
+import axiosInstance from "../../axios/axios.jsx";
+import toast from "react-hot-toast";
 
 import XSvg from "../../components/svgs/X";
 
@@ -40,12 +43,28 @@ const SignUpPage = () => {
         .required("Required"),
     }),
     onSubmit: (values) => {
-      console.log(values);
-      alert(JSON.stringify(values, null, 2));
+      mutate(values);
+
+      // alert(JSON.stringify(values, null, 2));
     },
   });
 
-  const isError = false;
+  const { mutate, isError, isPending, error } = useMutation({
+    mutationFn: async (data) => {
+      try {
+        const response = await axiosInstance.post("/auth/signup", data);
+        console.log("status: ", response.status);
+        console.log("message: ", response.data.message);
+        console.log("data: ", response.data.createdUser);
+        toast.success("Account created successfully");
+      } catch (err) {
+        console.log("status: ", err.response.status);
+        console.log(err.response.data);
+        toast.error(err.response.data.message);
+        throw error;
+      }
+    },
+  });
 
   return (
     <div className="max-w-screen-xl mx-auto flex h-screen px-10">
@@ -127,7 +146,7 @@ const SignUpPage = () => {
             type="submit"
             className="btn rounded-full btn-primary text-white"
           >
-            Sign up
+            {isPending ? "Loading..." : "Sign Up"}
           </button>
           {isError && (
             <p className="text-red-500 text-xs italic">Something went wrong</p>
