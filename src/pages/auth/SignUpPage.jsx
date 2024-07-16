@@ -58,10 +58,18 @@ const SignUpPage = () => {
         console.log("data: ", response.data.createdUser);
         toast.success("Account created successfully");
       } catch (err) {
-        console.log("status: ", err.response.status);
-        console.log(err.response.data);
-        toast.error(err.response.data.message);
-        throw error;
+        if (!err.response.data.message) {
+          // If request was sent but no response received
+          console.log("ERROR: ", err.message);
+          throw new Error("Something went wrong");
+        } else {
+          // Request was sent but response received with a status code
+          // that falls out of the range of 2xx
+          console.log("status: ", err.response.status);
+          console.log(err.response.data);
+          toast.error(err.response.data.message);
+          throw new Error(err.response.data.message);
+        }
       }
     },
   });
@@ -149,7 +157,7 @@ const SignUpPage = () => {
             {isPending ? "Loading..." : "Sign Up"}
           </button>
           {isError && (
-            <p className="text-red-500 text-xs italic">Something went wrong</p>
+            <p className="text-red-500 text-xs italic">{error.message}</p>
           )}
         </form>
         <div className="flex flex-col lg:w-2/3 gap-2 mt-4">
