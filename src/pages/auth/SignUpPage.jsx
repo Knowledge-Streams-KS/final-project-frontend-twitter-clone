@@ -1,6 +1,9 @@
 import { Link } from "react-router-dom";
 import { useFormik } from "formik";
 import * as Yup from "yup";
+import { useMutation } from "@tanstack/react-query";
+import axiosInstance from "../../axios/axios.jsx";
+import toast from "react-hot-toast";
 
 import XSvg from "../../components/svgs/X";
 
@@ -40,12 +43,36 @@ const SignUpPage = () => {
         .required("Required"),
     }),
     onSubmit: (values) => {
-      console.log(values);
-      alert(JSON.stringify(values, null, 2));
+      mutate(values);
+
+      // alert(JSON.stringify(values, null, 2));
     },
   });
 
-  const isError = false;
+  const { mutate, isError, isPending, error } = useMutation({
+    mutationFn: async (data) => {
+      try {
+        const response = await axiosInstance.post("/auth/signup", data);
+        console.log("status: ", response.status);
+        console.log("message: ", response.data.message);
+        console.log("data: ", response.data.createdUser);
+        toast.success("Account created successfully");
+      } catch (err) {
+        if (!err.response.data.message) {
+          // If request was sent but no response received
+          console.log("ERROR: ", err.message);
+          throw new Error("Something went wrong");
+        } else {
+          // Request was sent but response received with a status code
+          // that falls out of the range of 2xx
+          console.log("status: ", err.response.status);
+          console.log(err.response.data);
+          toast.error(err.response.data.message);
+          throw new Error(err.response.data.message);
+        }
+      }
+    },
+  });
 
   return (
     <div className="max-w-screen-xl mx-auto flex h-screen px-10">
@@ -127,10 +154,10 @@ const SignUpPage = () => {
             type="submit"
             className="btn rounded-full btn-primary text-white"
           >
-            Sign up
+            {isPending ? "Loading..." : "Sign Up"}
           </button>
           {isError && (
-            <p className="text-red-500 text-xs italic">Something went wrong</p>
+            <p className="text-red-500 text-xs italic">{error.message}</p>
           )}
         </form>
         <div className="flex flex-col lg:w-2/3 gap-2 mt-4">

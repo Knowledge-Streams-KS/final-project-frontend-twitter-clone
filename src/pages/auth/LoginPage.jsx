@@ -1,6 +1,9 @@
 import { useFormik } from "formik";
 import { Link } from "react-router-dom";
 import * as Yup from "yup";
+import axiosInstance from "../../axios/axios";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 
 import XSvg from "../../components/svgs/X";
 
@@ -32,11 +35,38 @@ const LoginPage = () => {
     }),
     onSubmit: (values) => {
       console.log(values);
-      alert(JSON.stringify(values, null, 2));
+      loginMutation(values);
+      // alert(JSON.stringify(values, null, 2));
     },
   });
 
-  const isError = false;
+  const queryClient = useQueryClient();
+
+  const {
+    mutate: loginMutation,
+    isError,
+    isPending,
+    error,
+  } = useMutation({
+    mutationFn: async (data) => {
+      try {
+        console.log(document.cookie);
+        const response = await axiosInstance.post("/auth/login", data);
+        console.log("status: ", response.status);
+        console.log("message: ", response.data.message);
+      } catch (err) {
+        console.log("status: ", err.response.status);
+        console.log("Error: ", err.response.data.message);
+        toast.error(err.response.data.message);
+        console.log(err);
+        throw new Error(err.response.data.message || "Something went wrong");
+      }
+    },
+    onSuccess: () => {
+      toast.success("Logged in successfully");
+      queryClient.invalidateQueries({ queryKey: ["authUser"] });
+    },
+  });
 
   return (
     <div className="max-w-screen-xl mx-auto flex h-screen">
@@ -84,9 +114,9 @@ const LoginPage = () => {
             type="submit"
             className="btn rounded-full btn-primary text-white"
           >
-            Login
+            {isPending ? "Loading..." : "Login"}
           </button>
-          {isError && <p className="text-red-500">Something went wrong</p>}
+          {isError && <p className="text-red-500 italic">{error.message}</p>}
         </form>
         <div className="flex flex-col gap-2 mt-4">
           <p className="text-white text-lg">{"Don't"} have an account?</p>
