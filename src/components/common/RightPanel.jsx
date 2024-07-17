@@ -2,6 +2,8 @@ import { Link } from "react-router-dom";
 import RightPanelSkeleton from "../skeletons/RightPanelSkeleton";
 import { useQuery } from "@tanstack/react-query";
 import axiosInstance from "../../axios/axios";
+import useFollow from "../../hooks/useFollow";
+import LoadingSpinner from "./LoadingSpinner";
 
 const RightPanel = () => {
   const { data: suggestedUsers, isLoading } = useQuery({
@@ -17,6 +19,8 @@ const RightPanel = () => {
       }
     },
   });
+
+  const { followUnfollow, isPending } = useFollow();
 
   return (
     <div className="hidden lg:block my-4 mx-2">
@@ -57,9 +61,12 @@ const RightPanel = () => {
                 <div>
                   <button
                     className="btn bg-white text-black hover:bg-white hover:opacity-90 rounded-full btn-sm"
-                    onClick={(e) => e.preventDefault()}
+                    onClick={(e) => {
+                      followUnfollow(user._id);
+                      e.preventDefault();
+                    }}
                   >
-                    Follow
+                    {isPending ? <LoadingSpinner size="sm" /> : "follow"}
                   </button>
                 </div>
               </Link>
