@@ -6,6 +6,7 @@ import ProfileHeaderSkeleton from "../../components/skeletons/ProfileHeaderSkele
 import EditProfileModal from "./EditProfileModal";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import axiosInstance from "../../axios/axios";
+import useFollow from "../../hooks/useFollow";
 
 import { POSTS } from "../../utils/db/dummy";
 
@@ -21,10 +22,12 @@ const ProfilePage = () => {
 
   const { username } = useParams();
 
+  const { followUnfollow, isPending } = useFollow();
+
   const coverImgRef = useRef(null);
   const profileImgRef = useRef(null);
 
-  const isMyProfile = true;
+  const { data: authUser } = useQuery({ queryKey: ["authUser"] });
 
   const {
     data: user,
@@ -44,6 +47,8 @@ const ProfilePage = () => {
       }
     },
   });
+
+  const isMyProfile = authUser._id === user?._id;
 
   useEffect(() => {
     refetch();
@@ -139,9 +144,13 @@ const ProfilePage = () => {
                 {!isMyProfile && (
                   <button
                     className="btn btn-outline rounded-full btn-sm"
-                    onClick={() => alert("Followed successfully")}
+                    onClick={() => {
+                      followUnfollow(user?._id);
+                    }}
                   >
-                    Follow
+                    {!isPending && authUser.following.includes(user._id)
+                      ? "Unfollow"
+                      : "Follow"}
                   </button>
                 )}
                 {(coverImg || profileImg) && (
@@ -174,7 +183,7 @@ const ProfilePage = () => {
                           rel="noreferrer"
                           className="text-sm text-blue-500 hover:underline"
                         >
-                          {user.link}
+                          {user?.link}
                         </a>
                       </>
                     </div>
