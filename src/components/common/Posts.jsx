@@ -1,6 +1,5 @@
 import Post from "./Post";
 import PostSkeleton from "../skeletons/PostSkeleton";
-import { POSTS } from "../../utils/db/dummy";
 import { useQuery } from "@tanstack/react-query";
 import axiosInstance from "../../axios/axios";
 import { useEffect } from "react";
@@ -27,8 +26,8 @@ const Posts = ({ feedType }) => {
     queryFn: async () => {
       try {
         const response = await axiosInstance.get(POST_ENDPOINT);
-        console.log("status: ", response.status);
-        console.log("message: ", response.data.message);
+        // console.log("status: ", response.status);
+        // console.log("data: ", response.data.data);
         return response.data.data;
       } catch (err) {
         console.log("status: ", err.response.status);
