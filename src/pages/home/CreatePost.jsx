@@ -2,6 +2,9 @@ import { CiImageOn } from "react-icons/ci";
 import { BsEmojiSmileFill } from "react-icons/bs";
 import { useRef, useState } from "react";
 import { IoCloseSharp } from "react-icons/io5";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import axiosInstance from "../../axios/axios";
+import toast from "react-hot-toast";
 
 const CreatePost = () => {
   const [text, setText] = useState("");
@@ -9,16 +12,43 @@ const CreatePost = () => {
 
   const imgRef = useRef(null);
 
-  const isPending = false;
-  const isError = false;
+  const { data: authUser } = useQuery({ queryKey: ["authUser"] });
+  const queryClient = useQueryClient();
 
-  const data = {
-    profileImg: "/avatars/boy1.png",
-  };
+  const {
+    mutate: createPost,
+    isPending,
+    isError,
+    error,
+  } = useMutation({
+    mutationFn: async (formData) => {
+      try {
+        const response = await axiosInstance.post("/post/create", formData);
+        const data = response.data.data;
+        console.log(data);
+      } catch (err) {
+        console.log("status: ", err.response.status);
+        console.log("Error: ", err.response.data.message);
+        console.log(err);
+        //If if dont throw this error it also runs onSuccess
+        throw new Error("Something went wrong");
+      }
+    },
+    onSuccess: () => {
+      setImg(null);
+      setText("");
+      toast.success("Post created successfully");
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
+    },
+  });
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    alert("Post created successfully");
+    const formData = {
+      text,
+      img,
+    };
+    createPost(formData);
   };
 
   const handleImgChange = (e) => {
@@ -28,7 +58,7 @@ const CreatePost = () => {
       reader.onload = () => {
         setImg(reader.result);
       };
-      // reader.readAsDataURL(file)
+      reader.readAsDataURL(file);
     }
   };
 
@@ -36,7 +66,7 @@ const CreatePost = () => {
     <div className="flex p-4 items-start gap-4 border-b border-gray-700">
       <div className="avatar">
         <div className="w-8 rounded-full">
-          <img src={data.profileImg || "/avatar-placeholder.png"} />
+          <img src={authUser.profileImg || "/avatar-placeholder.png"} />
         </div>
       </div>
       <form className="flex flex-col gap-2 w-full" onSubmit={handleSubmit}>
@@ -81,9 +111,7 @@ const CreatePost = () => {
             {isPending ? "Posting..." : "Post"}
           </button>
         </div>
-        {isError && (
-          <div className="text-red-500 italic">Something went wrong</div>
-        )}
+        {isError && <div className="text-red-500 italic">{error.message}</div>}
       </form>
     </div>
   );
