@@ -4,32 +4,49 @@ import LoadingSpinner from "../../components/common/LoadingSpinner";
 import { IoSettingsOutline } from "react-icons/io5";
 import { FaUser } from "react-icons/fa";
 import { FaHeart } from "react-icons/fa6";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import axiosInstance from "../../axios/axios";
+import toast from "react-hot-toast";
 
 const NotificationPage = () => {
-  const isLoading = false;
-  const notifications = [
-    {
-      _id: "1",
-      from: {
-        _id: "1",
-        username: "johndoe",
-        profileImg: "/avatars/boy2.png",
-      },
-      type: "follow",
+  const queryClient = useQueryClient();
+  const { data: notifications, isPending } = useQuery({
+    queryKey: ["notifications"],
+    queryFn: async () => {
+      try {
+        const response = await axiosInstance.get("/notification/");
+        // console.log("status: ", response.status);
+        // console.log("data: ", response.data.data);
+        return response.data.data;
+      } catch (err) {
+        console.log("status: ", err.response.status);
+        console.log("Error: ", err.response.data.message);
+        console.log(err);
+      }
     },
-    {
-      _id: "2",
-      from: {
-        _id: "2",
-        username: "janedoe",
-        profileImg: "/avatars/girl1.png",
-      },
-      type: "like",
-    },
-  ];
+  });
 
-  const deleteNotifications = () => {
-    alert("All notifications deleted");
+  const { mutate: deleteNotifications, isLoading } = useMutation({
+    mutationFn: async () => {
+      try {
+        const response = await axiosInstance.delete("/notification/");
+        console.log("status: ", response.status);
+        console.log("message: ", response.data.message);
+      } catch (err) {
+        console.log("status: ", err.response.status);
+        console.log("Error: ", err.response.data.message);
+        console.log(err);
+      }
+    },
+    onSuccess: () => {
+      toast.success("Notifications deleted successfully");
+      // invaldidate query to refetch data
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
+
+  const handleDeleteNotifications = () => {
+    deleteNotifications();
   };
 
   return (
@@ -46,7 +63,9 @@ const NotificationPage = () => {
               className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52"
             >
               <li>
-                <a onClick={deleteNotifications}>Delete all notifications</a>
+                <a onClick={handleDeleteNotifications}>
+                  Delete all notifications
+                </a>
               </li>
             </ul>
           </div>
