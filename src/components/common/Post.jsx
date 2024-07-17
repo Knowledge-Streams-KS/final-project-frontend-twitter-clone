@@ -73,6 +73,27 @@ const Post = ({ post }) => {
     },
   });
 
+  const { mutate: commentPost, isPending: isCommenting } = useMutation({
+    mutationFn: async (data) => {
+      try {
+        const response = await axiosInstance.post(
+          `/post/comment/${post._id}`,
+          data
+        );
+        console.log("status: ", response.status);
+      } catch (err) {
+        console.log("status: ", err.response.status);
+        console.log("Error: ", err.response.data.message);
+        console.log(err);
+      }
+    },
+    onSuccess: () => {
+      // invaldidate query to refetch data
+      toast.success("commented successfully");
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
+    },
+  });
+
   const postOwner = post.user;
   const isLiked = post.likes.includes(authUser._id);
 
@@ -80,14 +101,16 @@ const Post = ({ post }) => {
 
   const formattedDate = "1h";
 
-  const isCommenting = false;
-
   const handleDeletePost = () => {
     deletePost();
   };
 
   const handlePostComment = (e) => {
     e.preventDefault();
+    const data = {
+      text: comment,
+    };
+    commentPost(data);
   };
 
   const handleLikePost = () => {
