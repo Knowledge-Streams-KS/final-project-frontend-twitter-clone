@@ -17,7 +17,7 @@ const Post = ({ post }) => {
 
   const { data: authUser } = useQuery({ queryKey: ["authUser"] });
 
-  const { mutate: deletePost, isPending } = useMutation({
+  const { mutate: deletePost, isPending: isDeleting } = useMutation({
     mutationFn: async () => {
       try {
         const response = await axiosInstance.delete(`/post/delete/${post._id}`);
@@ -36,8 +36,45 @@ const Post = ({ post }) => {
     },
   });
 
+  const { mutate: likeUnlikePost, isPending: isLiking } = useMutation({
+    mutationFn: async () => {
+      try {
+        const response = await axiosInstance.post(`/post/like/${post._id}`);
+        console.log("status: ", response.status);
+        console.log("message: ", response.data.message);
+
+        //caching
+        const updatedLikes = response.data.data;
+        console.log("updated Likes: ", updatedLikes);
+        return updatedLikes;
+      } catch (err) {
+        console.log("status: ", err.response.status);
+        console.log("Error: ", err.response.data.message);
+        console.log(err);
+      }
+    },
+    onSuccess: (updatedLikes) => {
+      // invaldidate query to refetch data
+      // this is not the best user experience UX because it will refresh all posts
+      // queryClient.invalidateQueries({ queryKey: ["posts"] });
+      // instead update cache directly for that post
+
+      queryClient.setQueryData(["posts"], (oldPosts) => {
+        const newPosts = oldPosts.map((p) => {
+          if (p._id === post._id) {
+            return { ...p, likes: updatedLikes };
+          } else {
+            return p;
+          }
+        });
+
+        return newPosts;
+      });
+    },
+  });
+
   const postOwner = post.user;
-  const isLiked = false;
+  const isLiked = post.likes.includes(authUser._id);
 
   const isMyPost = authUser._id === postOwner._id;
 
@@ -53,7 +90,9 @@ const Post = ({ post }) => {
     e.preventDefault();
   };
 
-  const handleLikePost = () => {};
+  const handleLikePost = () => {
+    likeUnlikePost();
+  };
 
   return (
     <>
@@ -80,13 +119,13 @@ const Post = ({ post }) => {
             </span>
             {isMyPost && (
               <span className="flex justify-end flex-1">
-                {!isPending && (
+                {!isDeleting && (
                   <FaTrash
                     className="cursor-pointer hover:text-red-500"
                     onClick={handleDeletePost}
                   />
                 )}
-                {isPending && <LoadingSpinner size="sm" />}
+                {isDeleting && <LoadingSpinner size="sm" />}
               </span>
             )}
           </div>
@@ -187,7 +226,8 @@ const Post = ({ post }) => {
                 className="flex gap-1 items-center group cursor-pointer"
                 onClick={handleLikePost}
               >
-                {!isLiked && (
+                {isLiking && <LoadingSpinner size="sm" />}
+                {!isLiked && !isLiking && (
                   <FaRegHeart className="w-4 h-4 cursor-pointer text-slate-500 group-hover:text-pink-500" />
                 )}
                 {isLiked && (
