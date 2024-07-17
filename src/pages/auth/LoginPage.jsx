@@ -50,7 +50,6 @@ const LoginPage = () => {
   } = useMutation({
     mutationFn: async (data) => {
       try {
-        console.log(document.cookie);
         const response = await axiosInstance.post("/auth/login", data);
         console.log("status: ", response.status);
         console.log("message: ", response.data.message);
@@ -64,6 +63,7 @@ const LoginPage = () => {
     },
     onSuccess: () => {
       toast.success("Logged in successfully");
+      // Invalidate the last query and refetch data
       queryClient.invalidateQueries({ queryKey: ["authUser"] });
     },
   });

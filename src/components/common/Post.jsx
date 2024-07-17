@@ -5,19 +5,49 @@ import { FaRegBookmark } from "react-icons/fa6";
 import { FaTrash } from "react-icons/fa";
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import axiosInstance from "../../axios/axios";
+import toast from "react-hot-toast";
+import LoadingSpinner from "./LoadingSpinner";
 
 const Post = ({ post }) => {
   const [comment, setComment] = useState("");
+
+  const queryClient = useQueryClient();
+
+  const { data: authUser } = useQuery({ queryKey: ["authUser"] });
+
+  const { mutate: deletePost, isPending } = useMutation({
+    mutationFn: async () => {
+      try {
+        const response = await axiosInstance.delete(`/post/delete/${post._id}`);
+        console.log("status: ", response.status);
+        console.log("message: ", response.data.message);
+      } catch (err) {
+        console.log("status: ", err.response.status);
+        console.log("Error: ", err.response.data.message);
+        console.log(err);
+      }
+    },
+    onSuccess: () => {
+      toast.success("Post deleted successfully");
+      // invaldidate query to refetch data
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
+    },
+  });
+
   const postOwner = post.user;
   const isLiked = false;
 
-  const isMyPost = true;
+  const isMyPost = authUser._id === postOwner._id;
 
   const formattedDate = "1h";
 
   const isCommenting = false;
 
-  const handleDeletePost = () => {};
+  const handleDeletePost = () => {
+    deletePost();
+  };
 
   const handlePostComment = (e) => {
     e.preventDefault();
@@ -50,10 +80,13 @@ const Post = ({ post }) => {
             </span>
             {isMyPost && (
               <span className="flex justify-end flex-1">
-                <FaTrash
-                  className="cursor-pointer hover:text-red-500"
-                  onClick={handleDeletePost}
-                />
+                {!isPending && (
+                  <FaTrash
+                    className="cursor-pointer hover:text-red-500"
+                    onClick={handleDeletePost}
+                  />
+                )}
+                {isPending && <LoadingSpinner size="sm" />}
               </span>
             )}
           </div>
