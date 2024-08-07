@@ -4,9 +4,10 @@ import { Link, useParams } from "react-router-dom";
 import Posts from "../../components/common/Posts";
 import ProfileHeaderSkeleton from "../../components/skeletons/ProfileHeaderSkeleton";
 import EditProfileModal from "./EditProfileModal";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axiosInstance from "../../axios/axios";
 import useFollow from "../../hooks/useFollow";
+import toast from "react-hot-toast";
 
 import { POSTS } from "../../utils/db/dummy";
 
@@ -26,6 +27,8 @@ const ProfilePage = () => {
 
   const coverImgRef = useRef(null);
   const profileImgRef = useRef(null);
+
+  const queryClient = useQueryClient();
 
   const { data: authUser } = useQuery({ queryKey: ["authUser"] });
 
@@ -54,6 +57,44 @@ const ProfilePage = () => {
     refetch();
   }, [username]);
 
+  const {
+    mutate: updateprofileImgs,
+    isError,
+    isPending: isUpdating,
+    error,
+  } = useMutation({
+    mutationFn: async (data) => {
+      try {
+        const response = await axiosInstance.post("/user/update", data);
+        console.log(response);
+        console.log("status: ", response.status);
+        // console.log("message: ", response.data.message);
+        console.log("data: ", response.data.data);
+        toast.success("Profile updated successfully");
+      } catch (err) {
+        if (!err.response.data.message) {
+          // If request was sent but no response received
+          console.log("ERROR: ", err.message);
+          throw new Error("Something went wrong");
+        } else {
+          // Request was sent but response received with a status code
+          // that falls out of the range of 2xx
+          console.log("status: ", err.response.status);
+          console.log(err.response.data);
+          toast.error(err.response.data.message);
+          throw new Error(err.response.data.message);
+        }
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["authUser"] });
+      queryClient.invalidateQueries({ queryKey: ["user"] });
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
+      setCoverImg(null);
+      setProfileImg(null);
+    },
+  });
+
   const handleImgChange = (e, state) => {
     const file = e.target.files[0];
     if (file) {
@@ -64,6 +105,14 @@ const ProfilePage = () => {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleUpdateImg = () => {
+    const data = {
+      profileImg,
+      coverImg,
+    };
+    updateprofileImgs(data);
   };
 
   return (
@@ -156,9 +205,9 @@ const ProfilePage = () => {
                 {(coverImg || profileImg) && (
                   <button
                     className="btn btn-primary rounded-full btn-sm text-white px-4 ml-2"
-                    onClick={() => alert("Profile updated successfully")}
+                    onClick={handleUpdateImg}
                   >
-                    Update
+                    {isUpdating ? "Updating..." : "Update"}
                   </button>
                 )}
               </div>
