@@ -1,9 +1,13 @@
-import { useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link, useParams } from "react-router-dom";
 
 import Posts from "../../components/common/Posts";
 import ProfileHeaderSkeleton from "../../components/skeletons/ProfileHeaderSkeleton";
 import EditProfileModal from "./EditProfileModal";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import axiosInstance from "../../axios/axios";
+import useFollow from "../../hooks/useFollow";
+import toast from "react-hot-toast";
 
 import { POSTS } from "../../utils/db/dummy";
 
@@ -17,23 +21,79 @@ const ProfilePage = () => {
   const [profileImg, setProfileImg] = useState(null);
   const [feedType, setFeedType] = useState("posts");
 
+  const { username } = useParams();
+
+  const { followUnfollow, isPending } = useFollow();
+
   const coverImgRef = useRef(null);
   const profileImgRef = useRef(null);
 
-  const isLoading = false;
-  const isMyProfile = true;
+  const queryClient = useQueryClient();
 
-  const user = {
-    _id: "1",
-    fullName: "John Doe",
-    username: "johndoe",
-    profileImg: "/avatars/boy2.png",
-    coverImg: "/cover.png",
-    bio: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-    link: "https://youtube.com/@asaprogrammer_",
-    following: ["1", "2", "3"],
-    followers: ["1", "2", "3"],
-  };
+  const { data: authUser } = useQuery({ queryKey: ["authUser"] });
+
+  const {
+    data: user,
+    isLoading,
+    refetch,
+    isRefetching,
+  } = useQuery({
+    queryKey: ["user"],
+    queryFn: async () => {
+      try {
+        const response = await axiosInstance.get(`/user/profile/${username}`);
+        return response.data.data;
+      } catch (err) {
+        console.log("status: ", err.response.status);
+        console.log("Error: ", err.response.data.message);
+        console.log(err);
+      }
+    },
+  });
+
+  const isMyProfile = authUser._id === user?._id;
+
+  useEffect(() => {
+    refetch();
+  }, [username]);
+
+  const {
+    mutate: updateprofileImgs,
+    isError,
+    isPending: isUpdating,
+    error,
+  } = useMutation({
+    mutationFn: async (data) => {
+      try {
+        const response = await axiosInstance.post("/user/update", data);
+        console.log(response);
+        console.log("status: ", response.status);
+        // console.log("message: ", response.data.message);
+        console.log("data: ", response.data.data);
+        toast.success("Profile updated successfully");
+      } catch (err) {
+        if (!err.response.data.message) {
+          // If request was sent but no response received
+          console.log("ERROR: ", err.message);
+          throw new Error("Something went wrong");
+        } else {
+          // Request was sent but response received with a status code
+          // that falls out of the range of 2xx
+          console.log("status: ", err.response.status);
+          console.log(err.response.data);
+          toast.error(err.response.data.message);
+          throw new Error(err.response.data.message);
+        }
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["authUser"] });
+      queryClient.invalidateQueries({ queryKey: ["user"] });
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
+      setCoverImg(null);
+      setProfileImg(null);
+    },
+  });
 
   const handleImgChange = (e, state) => {
     const file = e.target.files[0];
@@ -47,16 +107,24 @@ const ProfilePage = () => {
     }
   };
 
+  const handleUpdateImg = () => {
+    const data = {
+      profileImg,
+      coverImg,
+    };
+    updateprofileImgs(data);
+  };
+
   return (
     <>
       <div className="flex-[4_4_0]  border-r border-gray-700 min-h-screen ">
         {/* HEADER */}
-        {isLoading && <ProfileHeaderSkeleton />}
-        {!isLoading && !user && (
+        {(isLoading || isRefetching) && <ProfileHeaderSkeleton />}
+        {!isLoading && !isRefetching && !user && (
           <p className="text-center text-lg mt-4">User not found</p>
         )}
         <div className="flex flex-col">
-          {!isLoading && user && (
+          {!isLoading && !isRefetching && user && (
             <>
               <div className="flex gap-10 px-4 py-2 items-center">
                 <Link to="/">
@@ -125,17 +193,21 @@ const ProfilePage = () => {
                 {!isMyProfile && (
                   <button
                     className="btn btn-outline rounded-full btn-sm"
-                    onClick={() => alert("Followed successfully")}
+                    onClick={() => {
+                      followUnfollow(user?._id);
+                    }}
                   >
-                    Follow
+                    {!isPending && authUser.following.includes(user._id)
+                      ? "Unfollow"
+                      : "Follow"}
                   </button>
                 )}
                 {(coverImg || profileImg) && (
                   <button
                     className="btn btn-primary rounded-full btn-sm text-white px-4 ml-2"
-                    onClick={() => alert("Profile updated successfully")}
+                    onClick={handleUpdateImg}
                   >
-                    Update
+                    {isUpdating ? "Updating..." : "Update"}
                   </button>
                 )}
               </div>
@@ -160,7 +232,7 @@ const ProfilePage = () => {
                           rel="noreferrer"
                           className="text-sm text-blue-500 hover:underline"
                         >
-                          youtube.com/@asaprogrammer_
+                          {user?.link}
                         </a>
                       </>
                     </div>
@@ -210,7 +282,7 @@ const ProfilePage = () => {
             </>
           )}
 
-          <Posts />
+          <Posts feedType={feedType} username={username} userId={user?._id} />
         </div>
       </div>
     </>
